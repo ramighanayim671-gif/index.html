@@ -415,7 +415,6 @@
         .admin-controls { display: none; gap: 10px; }
         .admin-controls.show { display: flex; }
 
-        /* تعديلات الموبايل والشاشات الصغيرة */
         @media (max-width: 768px) {
             .menu-toggle-btn { display: flex; }
             aside {
@@ -425,19 +424,13 @@
                 height: 100%;
                 z-index: 1050;
             }
-            aside.mobile-open {
-                right: 0;
-            }
+            aside.mobile-open { right: 0; }
             main {
                 padding: 20px 15px;
-                padding-top: 70px; /* مساحة لزر القائمة العلوي */
+                padding-top: 70px;
             }
-            .master-layout {
-                flex-direction: column;
-            }
-            .sub-sidebar {
-                width: 100%;
-            }
+            .master-layout { flex-direction: column; }
+            .sub-sidebar { width: 100%; }
         }
     </style>
 </head>
@@ -462,7 +455,7 @@
         </div>
         
         <div class="call-btn-container">
-            <a href="tel:0500000000" class="btn-call">
+            <a href="tel:0505510837" class="btn-call">
                 📞 اتصل بنا الآن
             </a>
         </div>
@@ -525,7 +518,7 @@
             </div>
         </section>
 
-        <!-- 3. صفحة المستلزمات والخدمات (بدون تصفية) -->
+        <!-- 3. صفحة المستلزمات والخدمات -->
         <section id="supplies" class="section">
             <div class="top-header">
                 <h1>المستلزمات والخدمات</h1>
@@ -629,7 +622,27 @@
         </div>
     </div>
 
-    <script>
+    <!-- كود JavaScript مع معالجة جذرية لإنشاء البيانات في Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5etZZNB0pcn-MGXv8M9IraLMG4801QGw",
+            authDomain: "hakl-c06cc.firebaseapp.com",
+            databaseURL: "https://hakl-c06cc-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "hakl-c06cc",
+            storageBucket: "hakl-c06cc.appspot.com",
+            messagingSenderId: "966198696909",
+            appId: "1:966198696909:web:a8776f502a9a97be0f0284",
+            measurementId: "G-TP0QK5C996"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase(app);
+
         const productDescriptions = {
             "الكل": "عرض كافة أنواع المكيفات والماركات المتوفرة في المتجر بجودة عالية.",
             "Electra": "مكيفات إلكترا الرائدة عالمياً: تتميز بالكفاءة العالية في توفير الطاقة، التبريد السريع، والاعتمادية الطويلة.",
@@ -637,35 +650,56 @@
             "Family": "مكيفات فاميلي الاقتصادية: الأداء القوي والموثوقية العالية بأسعار تناسب كل عائلة وصديقة للجيب."
         };
 
-        let products = JSON.parse(localStorage.getItem('web_products')) || [];
-        let supplies = JSON.parse(localStorage.getItem('web_supplies')) || [];
-
+        let products = [];
+        let supplies = [];
         let currentProductFilter = "الكل";
         let isAdminUnlocked = false;
 
-        // وظائف إظهار وإخفاء القائمة الجانبية للموبايل
-        function toggleMobileMenu() {
-            const aside = document.getElementById('main-aside');
-            aside.classList.toggle('mobile-open');
+        // قراءة المكيفات فوراً من قاعدة البيانات
+        onValue(ref(db, 'products'), (snapshot) => {
+            const data = snapshot.val();
+            products = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+            renderProducts();
+        });
+
+        // قراءة المستلزمات فوراً من قاعدة البيانات
+        onValue(ref(db, 'supplies'), (snapshot) => {
+            const data = snapshot.val();
+            supplies = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+            renderSupplies();
+        });
+
+        function saveProductsToFirebase() {
+            set(ref(db, 'products'), products)
+                .then(() => console.log("تم حفظ المكيفات بنجاح في السحابة"))
+                .catch(err => console.error("خطأ في الحفظ:", err));
         }
 
-        function closeMobileMenu() {
-            const aside = document.getElementById('main-aside');
-            aside.classList.remove('mobile-open');
+        function saveSuppliesToFirebase() {
+            set(ref(db, 'supplies'), supplies)
+                .then(() => console.log("تم حفظ المستلزمات بنجاح في السحابة"))
+                .catch(err => console.error("خطأ في الحفظ:", err));
         }
 
-        function switchTab(tabId, btnElement) {
+        window.toggleMobileMenu = function() {
+            document.getElementById('main-aside').classList.toggle('mobile-open');
+        }
+
+        window.closeMobileMenu = function() {
+            document.getElementById('main-aside').classList.remove('mobile-open');
+        }
+
+        window.switchTab = function(tabId, btnElement) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('aside .nav-links li').forEach(l => l.classList.remove('active'));
-
             document.getElementById(tabId).classList.add('active');
             btnElement.parentElement.classList.add('active');
         }
 
-        function openModal(modalId) { document.getElementById(modalId).classList.add('open'); }
-        function closeModal(modalId) { document.getElementById(modalId).classList.remove('open'); }
+        window.openModal = function(modalId) { document.getElementById(modalId).classList.add('open'); }
+        window.closeModal = function(modalId) { document.getElementById(modalId).classList.remove('open'); }
 
-        function requestAccess() {
+        window.requestAccess = function() {
             if (isAdminUnlocked) {
                 alert('صلاحيات الإدارة مفعلة مسبقاً!');
                 return;
@@ -674,7 +708,7 @@
             openModal('code-modal');
         }
 
-        function verifyCode() {
+        window.verifyCode = function() {
             const enteredCode = document.getElementById('secret-code-input').value;
             if (enteredCode === "201517") {
                 isAdminUnlocked = true;
@@ -689,11 +723,10 @@
             }
         }
 
-        function filterProducts(category, btnElement) {
+        window.filterProducts = function(category, btnElement) {
             currentProductFilter = category;
             btnElement.parentElement.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
             btnElement.classList.add('active');
-
             document.getElementById('prod-desc-title').innerText = `عن قسم: ${category}`;
             document.getElementById('prod-desc-text').innerText = productDescriptions[category];
             renderProducts();
@@ -701,6 +734,7 @@
 
         function renderProducts() {
             const grid = document.getElementById('products-grid');
+            if (!grid) return;
             grid.innerHTML = '';
             let filtered = currentProductFilter === "الكل" ? products : products.filter(p => p.category === currentProductFilter);
 
@@ -713,16 +747,15 @@
                 let imgContent = p.image ? `<img src="${p.image}">` : `❄`;
                 grid.innerHTML += `
                     <div class="card-item">
-                        <button class="delete-btn" onclick="deleteProduct(${index})">✕</button>
+                        <button class="delete-btn" onclick="window.deleteProduct(${index})">✕</button>
                         <div class="card-img-placeholder">${imgContent} <span class="badge">${p.category}</span></div>
                         <div class="item-title">${p.name}</div>
                     </div>
                 `;
             });
-            localStorage.setItem('web_products', JSON.stringify(products));
         }
 
-        function addProduct(e) {
+        window.addProduct = function(e) {
             e.preventDefault();
             const name = document.getElementById('p-name').value;
             const category = document.getElementById('p-category').value;
@@ -732,30 +765,31 @@
                 const reader = new FileReader();
                 reader.onload = function(uploadEvent) {
                     products.push({ name, category, image: uploadEvent.target.result });
-                    renderProducts();
+                    saveProductsToFirebase();
                     closeModal('product-modal');
                     e.target.reset();
                 };
                 reader.readAsDataURL(imageInput.files[0]);
             } else {
                 products.push({ name, category, image: null });
-                renderProducts();
+                saveProductsToFirebase();
                 closeModal('product-modal');
                 e.target.reset();
             }
         }
 
-        function deleteProduct(index) {
+        window.deleteProduct = function(index) {
             if (!isAdminUnlocked) {
-                alert('يرجى تفعيل صلاحيات الإدارة أولاً عبر النقر المزدوج على الشعار.');
+                alert('يرجى تفعيل صلاحيات الإدارة أولاً.');
                 return;
             }
             products.splice(index, 1);
-            renderProducts();
+            saveProductsToFirebase();
         }
 
         function renderSupplies() {
             const grid = document.getElementById('supplies-grid');
+            if (!grid) return;
             grid.innerHTML = '';
 
             if (supplies.length === 0) {
@@ -767,16 +801,15 @@
                 let imgContent = s.image ? `<img src="${s.image}">` : `🛠️`;
                 grid.innerHTML += `
                     <div class="card-item">
-                        <button class="delete-btn" onclick="deleteSupply(${index})">✕</button>
+                        <button class="delete-btn" onclick="window.deleteSupply(${index})">✕</button>
                         <div class="card-img-placeholder">${imgContent}</div>
                         <div class="item-title">${s.name}</div>
                     </div>
                 `;
             });
-            localStorage.setItem('web_supplies', JSON.stringify(supplies));
         }
 
-        function addSupply(e) {
+        window.addSupply = function(e) {
             e.preventDefault();
             const name = document.getElementById('s-name').value;
             const imageInput = document.getElementById('s-image');
@@ -785,29 +818,29 @@
                 const reader = new FileReader();
                 reader.onload = function(uploadEvent) {
                     supplies.push({ name, image: uploadEvent.target.result });
-                    renderSupplies();
+                    saveSuppliesToFirebase();
                     closeModal('supply-modal');
                     e.target.reset();
                 };
                 reader.readAsDataURL(imageInput.files[0]);
             } else {
                 supplies.push({ name, image: null });
-                renderSupplies();
+                saveSuppliesToFirebase();
                 closeModal('supply-modal');
                 e.target.reset();
             }
         }
 
-        function deleteSupply(index) {
+        window.deleteSupply = function(index) {
             if (!isAdminUnlocked) {
-                alert('يرجى تفعيل صلاحيات الإدارة أولاً عبر النقر المزدوج على الشعار.');
+                alert('يرجى تفعيل صلاحيات الإدارة أولاً.');
                 return;
             }
             supplies.splice(index, 1);
-            renderSupplies();
+            saveSuppliesToFirebase();
         }
 
-        function calculateArea() {
+        window.calculateArea = function() {
             const length = parseFloat(document.getElementById('calc-length').value);
             const width = parseFloat(document.getElementById('calc-width').value);
             const resultBox = document.getElementById('calc-result');
@@ -836,11 +869,6 @@
             powerText.innerText = `التوصية المقترحة: ${recommendedPower}`;
             resultBox.style.display = 'block';
         }
-
-        window.onload = function() {
-            renderProducts();
-            renderSupplies();
-        };
     </script>
 </body>
 </html>
